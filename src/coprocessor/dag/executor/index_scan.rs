@@ -106,7 +106,13 @@ impl<'a> IndexScanExecutor<'a> {
         let (mut values, handle) = { box_try!(table::cut_idx_key(key, &self.col_ids)) };
 
         let handle = if handle.is_none() {
-            box_try!(value.as_slice().read_i64::<BigEndian>())
+            match value.as_slice().read_i64::<BigEndian>() {
+                Err(e) => {
+                    error!("failed to decode handle: {:?} col_ids: {:?} pk_col: {:?} meta_map: {:?} value: {:?}", e, self.col_ids, self.pk_col, values, value);
+                    return Err(box_err!(e));
+                }
+                Ok(h) => h,
+            }
         } else {
             handle.unwrap()
         };
